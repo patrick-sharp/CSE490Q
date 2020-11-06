@@ -2,7 +2,7 @@
 Homework for CSE490Q: https://courses.cs.washington.edu/courses/cse490q/20au/
 
 
-## usage
+## Usage
 Install Microsoft's Q#.  
 https://docs.microsoft.com/en-us/quantum/quickstarts/install-command-line?tabs=tabid-vscode
 
