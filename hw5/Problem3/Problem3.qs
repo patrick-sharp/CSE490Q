@@ -29,7 +29,6 @@ namespace Problem3 {
             let (decodedBit1, decodedBit2) = DecodeBits(qs);
             Message($"Original bits: ({bit1}, {bit2})");
             Message($"Decoded bits:  ({decodedBit1}, {decodedBit2})");
-            Message("");
             ResetAll(qs);
         }
     }
