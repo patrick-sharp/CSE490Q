@@ -35,10 +35,7 @@ namespace Problem3 {
     }
 
     @EntryPoint()
-    operation Problem3() : Unit {
-        PrintEncodeDecode(false, false);
-        PrintEncodeDecode(false, true);
-        PrintEncodeDecode(true, false);
-        PrintEncodeDecode(true, true);
+    operation Problem3(b1: Bool, b2: Bool) : Unit {
+        PrintEncodeDecode(b1, b2);
     }
 }
