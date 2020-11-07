@@ -11,6 +11,12 @@ Run `dotnet run`. This will build and run the Q# project whose directory you are
 
 Some of the programs require command line arguments.  
 For single-character arguments, use:  
-`dotnet run -<arg> <value>` 
+`dotnet run -<arg> <value>`  
 For multi-character arguments, use:  
 `dotnet run --<arg> <value>`
+
+### Examples:
+problem 3 of HW5 takes two booleans called `b1` and `b2` as arguments. You might run problem 3 with:  
+`dotnet run --b1 true --b2 false`  
+problem 4 of HW5 takes a boolean called `plus` as an argument. You might run problem 4 with:  
+`dotnet run --plus true`  
