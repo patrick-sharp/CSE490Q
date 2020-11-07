@@ -8,3 +8,9 @@ https://docs.microsoft.com/en-us/quantum/quickstarts/install-command-line?tabs=t
 
 In a terminal, navigate to one of the Q# project directories (i.e. a directory with a `.csproj` file).  
 Run `dotnet run`. This will build and run the Q# project whose directory you are in.
+
+Some of the programs require command line arguments.  
+For single-character arguments, use:  
+`dotnet run -<arg> <value>` 
+For multi-character arguments, use:  
+`dotnet run --<arg> <value>`
