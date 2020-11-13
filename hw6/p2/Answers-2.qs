@@ -1,6 +1,7 @@
 namespace p2 {
     open Microsoft.Quantum.Canon;
-    open Microsoft.Quantum.Intrinsic;    
+    open Microsoft.Quantum.Intrinsic;
+    open Microsoft.Quantum.Diagnostics;    
     
     /// # Summary
     /// Transform state |x,y. into state $|x, y + f(x)>, 
@@ -10,7 +11,19 @@ namespace p2 {
     /// Leave the query register in the same state it started in.
     operation Oracle_And (queryRegister : Qubit[], target : Qubit) : Unit 
     is Adj {
-        Message("!!TODO: Implement `Oracle_And` operation in `Answers-2.qs`!!");
+        let n = Length(queryRegister);
+        Message($"Qubits input {n}");
+        using (internals = Qubit[n]) {
+            CCNOT(queryRegister[0], queryRegister[1], internals[0]);
+            for (i in 1..n-2) {
+                CCNOT(queryRegister[i], internals[i-1], internals[i]);
+            }
+            CNOT(internals[n-2], target);
+            for (i in n-2..-1..1) {
+                Adjoint CCNOT(queryRegister[i], internals[i-1], internals[i]);
+            }
+            CCNOT(queryRegister[0], queryRegister[1], internals[0]);
+        }       
     }
 
     /// # Summary
