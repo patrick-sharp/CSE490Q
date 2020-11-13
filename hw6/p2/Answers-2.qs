@@ -16,11 +16,11 @@ namespace p2 {
         using (internals = Qubit[n]) {
             CCNOT(queryRegister[0], queryRegister[1], internals[0]);
             for (i in 1..n-2) {
-                CCNOT(queryRegister[i], internals[i-1], internals[i]);
+                CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
             }
             CNOT(internals[n-2], target);
             for (i in n-2..-1..1) {
-                Adjoint CCNOT(queryRegister[i], internals[i-1], internals[i]);
+                CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
             }
             CCNOT(queryRegister[0], queryRegister[1], internals[0]);
         }       
@@ -34,7 +34,30 @@ namespace p2 {
     /// Leave the query register in the same state it started in.
     operation Oracle_6 (queryRegister : Qubit[], target : Qubit) : Unit 
     is Adj {
-        Message("!!TODO: Implement `Oracle_6` operation in `Answers-2.qs`!!");
+        let n = Length(queryRegister);
+        using (internals = Qubit[n-1]) {
+            // make sure the first three bits are Zero, One, and One (0b110)
+            X(queryRegister[0]);
+            CCNOT(queryRegister[0], queryRegister[1], internals[0]);
+            CCNOT(queryRegister[2], internals[0], internals[1]);
+            // make sure every other bit is Zero
+            for (i in 2..n-2) {
+                X(queryRegister[i+1]);
+                CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
+            }
+
+            // xor with our target bit
+            CNOT(internals[n-2], target);
+
+            // reset everything
+            for (i in n-2..-1..2) {
+                CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
+                X(queryRegister[i+1]);
+            }
+            CCNOT(queryRegister[2], internals[0], internals[1]);
+            CCNOT(queryRegister[0], queryRegister[1], internals[0]);
+            X(queryRegister[0]);
+        }
     }
 
     /// # Summary
