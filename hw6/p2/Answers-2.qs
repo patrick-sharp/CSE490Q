@@ -148,12 +148,10 @@ namespace p2 {
             for (i in 0..n-1) {
                 Oracle_SATClause(queryRegister, eachClause[i], clause[i]);
             }
-            DumpRegister((), eachClause);
             CNOT(eachClause[0], runningTotal[0]);
             for (i in 1..n-1) {
                 CCNOT(runningTotal[i-1], eachClause[i], runningTotal[i]);
             }
-            DumpRegister((), runningTotal);
             CNOT(runningTotal[n-1], target);
             
             for (i in n-1..-1..1) {
