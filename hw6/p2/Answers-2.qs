@@ -12,7 +12,6 @@ namespace p2 {
     operation Oracle_And (queryRegister : Qubit[], target : Qubit) : Unit 
     is Adj {
         let n = Length(queryRegister);
-        Message($"Qubits input {n}");
         using (internals = Qubit[n]) {
             CCNOT(queryRegister[0], queryRegister[1], internals[0]);
             for (i in 1..n-2) {
@@ -68,7 +67,21 @@ namespace p2 {
     /// Leave the query register in the same state it started in.
     operation Oracle_Or (queryRegister : Qubit[], target : Qubit) : Unit 
     is Adj {
-        Message("!!TODO: Implement `Oracle_Or` operation in `Answers-2.qs`!!");
+        let n = Length(queryRegister);
+        // flip every bit
+        for (i in 0..n-1) {
+            X(queryRegister[i]);
+        }
+        // use previous oracle. Only sets target to One iff all bits were Zero before swap
+        Oracle_And(queryRegister, target);
+        // swap so that target == Zero iff all bits were Zero
+        X(target);
+
+        // reset everything
+        for (i in 0..n-1) {
+            X(queryRegister[i]);
+        }
+        
     }
     
     /// # Summary
@@ -84,7 +97,37 @@ namespace p2 {
     /// Leave the query register in the same state it started in.
     operation Oracle_SATClause (queryRegister : Qubit[], target : Qubit, clause : (Int, Bool)[]) : Unit 
     is Adj {
-        Message("!!TODO: Implement `Oracle_SATClause` operation in `Answers-2.qs`!!");
+        let n = Length(clause);
+        using (internals = Qubit[n]) {
+            let (index0, boolean0) = clause[0];
+            if (boolean0) {
+                X(queryRegister[index0]);
+            }
+            CNOT(queryRegister[index0], internals[0]);
+            for (i in 1..n-1) {
+                let (index, boolean) = clause[i];
+                if (boolean) {
+                    X(queryRegister[index]);
+                }
+                CCNOT(queryRegister[index], internals[i-1], internals[i]);
+            }
+            X(internals[n-1]);
+            CNOT(internals[n-1], target);
+
+            // reset
+            X(internals[n-1]);
+            for (i in 1..n-1) {
+                let (index, boolean) = clause[i];
+                CCNOT(queryRegister[index], internals[i-1], internals[i]);
+                if (boolean) {
+                    X(queryRegister[index]);
+                }
+            }
+            CNOT(queryRegister[index0], internals[0]);
+            if (boolean0) {
+                X(queryRegister[index0]);
+            }
+        }
     }
 
     /// # Summary
@@ -100,6 +143,26 @@ namespace p2 {
     /// Leave the query register in the same state it started in.
     operation Oracle_SAT (queryRegister : Qubit[], target : Qubit, clause : (Int, Bool)[][]) : Unit 
     is Adj {
-        Message("!!TODO: Implement `Oracle_SAT` operation in `Answers-2.qs`!!");
+        let n = Length(clause);
+        using ((runningTotal, eachClause) = (Qubit[n], Qubit[n])) {
+            for (i in 0..n-1) {
+                Oracle_SATClause(queryRegister, eachClause[i], clause[i]);
+            }
+            DumpRegister((), eachClause);
+            CNOT(eachClause[0], runningTotal[0]);
+            for (i in 1..n-1) {
+                CCNOT(runningTotal[i-1], eachClause[i], runningTotal[i]);
+            }
+            DumpRegister((), runningTotal);
+            CNOT(runningTotal[n-1], target);
+            
+            for (i in n-1..-1..1) {
+                CCNOT(runningTotal[i-1], eachClause[i], runningTotal[i]);
+            }
+            CNOT(eachClause[0], runningTotal[0]);
+            for (i in n-1..-1..0) {
+                Adjoint Oracle_SATClause(queryRegister, eachClause[i], clause[i]);
+            }
+        }
     }
 }

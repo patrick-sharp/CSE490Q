@@ -36,8 +36,9 @@ namespace p2 {
                    
             // Call the Oracle_SAT
             Oracle_SAT(register, target, [clause]);
+            // Oracle_SAT(register, target, [[(0, true), (1, false)], [(2, true), (3, false)], [(1, true), (3, false)]]);
             let e = MResetZ(target);
-            Message($"SAT({x}, [~0,1]) = {d}");
+            Message($"SAT({x}, [~0,1]) = {e}");
 
             // To avoid errors from releasing non-measured qubits.
             ResetAll(qubits);
