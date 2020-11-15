@@ -11,18 +11,7 @@ namespace p2 {
     /// Leave the query register in the same state it started in.
     operation Oracle_And (queryRegister : Qubit[], target : Qubit) : Unit 
     is Adj {
-        let n = Length(queryRegister);
-        using (internals = Qubit[n]) {
-            CCNOT(queryRegister[0], queryRegister[1], internals[0]);
-            for (i in 1..n-2) {
-                CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
-            }
-            CNOT(internals[n-2], target);
-            for (i in n-2..-1..1) {
-                CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
-            }
-            CCNOT(queryRegister[0], queryRegister[1], internals[0]);
-        }       
+        Controlled X(queryRegister, target);
     }
 
     /// # Summary
@@ -33,30 +22,14 @@ namespace p2 {
     /// Leave the query register in the same state it started in.
     operation Oracle_6 (queryRegister : Qubit[], target : Qubit) : Unit 
     is Adj {
-        let n = Length(queryRegister);
-        using (internals = Qubit[n-1]) {
-            // make sure the first three bits are Zero, One, and One (0b110)
+        // Assumes that there are at least three qubits in queryRegister
+        within {
             X(queryRegister[0]);
-            CCNOT(queryRegister[0], queryRegister[1], internals[0]);
-            CCNOT(queryRegister[2], internals[0], internals[1]);
-            // make sure every other bit is Zero
-            for (i in 2..n-2) {
-                X(queryRegister[i+1]);
-                CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
-            }
-
-            // xor with our target bit
-            CNOT(internals[n-2], target);
-
-            // reset everything
-            for (i in n-2..-1..2) {
-                CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
-                X(queryRegister[i+1]);
-            }
-            CCNOT(queryRegister[2], internals[0], internals[1]);
-            CCNOT(queryRegister[0], queryRegister[1], internals[0]);
-            X(queryRegister[0]);
+            ApplyToEachA(X, queryRegister[3...]);
+        } apply {
+            Controlled X(queryRegister, target);
         }
+        
     }
 
     /// # Summary
@@ -67,21 +40,14 @@ namespace p2 {
     /// Leave the query register in the same state it started in.
     operation Oracle_Or (queryRegister : Qubit[], target : Qubit) : Unit 
     is Adj {
-        let n = Length(queryRegister);
-        // flip every bit
-        for (i in 0..n-1) {
-            X(queryRegister[i]);
+        within {
+            ApplyToEachA(X, queryRegister);
+        } apply {
+            // use previous oracle. Only sets target to One iff all bits were Zero before swap
+            Oracle_And(queryRegister, target);
+            // swap so that target == Zero iff all bits were Zero
+            X(target);
         }
-        // use previous oracle. Only sets target to One iff all bits were Zero before swap
-        Oracle_And(queryRegister, target);
-        // swap so that target == Zero iff all bits were Zero
-        X(target);
-
-        // reset everything
-        for (i in 0..n-1) {
-            X(queryRegister[i]);
-        }
-        
     }
     
     /// # Summary
@@ -99,33 +65,20 @@ namespace p2 {
     is Adj {
         let n = Length(clause);
         using (internals = Qubit[n]) {
-            let (index0, boolean0) = clause[0];
-            if (boolean0) {
-                X(queryRegister[index0]);
-            }
-            CNOT(queryRegister[index0], internals[0]);
-            for (i in 1..n-1) {
-                let (index, boolean) = clause[i];
-                if (boolean) {
-                    X(queryRegister[index]);
+            within {
+                // If none of the qubits match their clause, internals will be all 1's.
+                for (i in 0..n-1) {
+                    let (index, boolean) = clause[i];
+                    if (boolean) {
+                        X(queryRegister[index]);
+                    }
+                    CNOT(queryRegister[index], internals[i]);
                 }
-                CCNOT(queryRegister[index], internals[i-1], internals[i]);
-            }
-            X(internals[n-1]);
-            CNOT(internals[n-1], target);
-
-            // reset
-            X(internals[n-1]);
-            for (i in 1..n-1) {
-                let (index, boolean) = clause[i];
-                CCNOT(queryRegister[index], internals[i-1], internals[i]);
-                if (boolean) {
-                    X(queryRegister[index]);
-                }
-            }
-            CNOT(queryRegister[index0], internals[0]);
-            if (boolean0) {
-                X(queryRegister[index0]);
+            } apply {
+                // if internals is all 1's, target should be unflipped.
+                // otherwise, it should be flipped.
+                Controlled X(internals, target);
+                X(target);
             }
         }
     }
@@ -144,23 +97,65 @@ namespace p2 {
     operation Oracle_SAT (queryRegister : Qubit[], target : Qubit, clause : (Int, Bool)[][]) : Unit 
     is Adj {
         let n = Length(clause);
-        using ((runningTotal, eachClause) = (Qubit[n], Qubit[n])) {
-            for (i in 0..n-1) {
-                Oracle_SATClause(queryRegister, eachClause[i], clause[i]);
-            }
-            CNOT(eachClause[0], runningTotal[0]);
-            for (i in 1..n-1) {
-                CCNOT(runningTotal[i-1], eachClause[i], runningTotal[i]);
-            }
-            CNOT(runningTotal[n-1], target);
-            
-            for (i in n-1..-1..1) {
-                CCNOT(runningTotal[i-1], eachClause[i], runningTotal[i]);
-            }
-            CNOT(eachClause[0], runningTotal[0]);
-            for (i in n-1..-1..0) {
-                Adjoint Oracle_SATClause(queryRegister, eachClause[i], clause[i]);
+        using (eachClause = Qubit[n]) {
+            within {
+                for (i in 0..n-1) {
+                    Oracle_SATClause(queryRegister, eachClause[i], clause[i]);
+                }
+            } apply {
+                Controlled X(eachClause, target);
             }
         }
     }
+
+    // Inefficient versions - before I discovered ApplyToEachA and Controlled
+    // Oracle_And
+        // I did the problem this way first, but realized there is a much simpler one-line way with the Controlled functor.
+        // let n = Length(queryRegister);
+        // using (internals = Qubit[n]) {
+        //     within {
+        //         DumpRegister((), internals);
+        //         CCNOT(queryRegister[0], queryRegister[1], internals[0]);
+        //         for (i in 1..n-2) {
+        //             CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
+        //         }
+        //         DumpRegister((), internals);
+        //     } apply {
+        //         CNOT(internals[n-2], target);
+        //     }
+        // }
+    // Oracle_6
+        // Assumes that there are at least three qubits in queryRegister
+        // let n = Length(queryRegister);
+        // using (internals = Qubit[n-1]) {
+        //     within {
+        //         // make sure the first three bits are Zero, One, and One (0b110)
+        //         X(queryRegister[0]);
+        //         CCNOT(queryRegister[0], queryRegister[1], internals[0]);
+        //         CCNOT(queryRegister[2], internals[0], internals[1]);
+        //         // make sure every other bit is Zero
+        //         for (i in 2..n-2) {
+        //             X(queryRegister[i+1]);
+        //             CCNOT(queryRegister[i+1], internals[i-1], internals[i]);
+        //         }
+        //     } apply {
+        //         // xor with our target bit
+        //         CNOT(internals[n-2], target);
+        //     }
+        // }    
+    // Oracle_SAT
+        // let n = Length(clause);
+        // using ((runningTotal, eachClause) = (Qubit[n], Qubit[n])) {
+        //     within {
+        //         for (i in 0..n-1) {
+        //             Oracle_SATClause(queryRegister, eachClause[i], clause[i]);
+        //         }
+        //         CNOT(eachClause[0], runningTotal[0]);
+        //         for (i in 1..n-1) {
+        //             CCNOT(runningTotal[i-1], eachClause[i], runningTotal[i]);
+        //         }
+        //     } apply {
+        //         CNOT(runningTotal[n-1], target);
+        //     }
+        // }
 }
