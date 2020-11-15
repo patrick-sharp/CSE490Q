@@ -13,7 +13,9 @@ namespace p3 {
         Message($"iterations: {iterations}");
         
         // Select any oracle from p2
-        let oracle = p2.Oracle_6;
+        // let oracle = p2.Oracle_6;
+        let oracle = p2.Oracle_And;
+        Message($"Using {oracle}");
 
         using (register = Qubit[n]) {
             GroversSearch(register, oracle, iterations);            
